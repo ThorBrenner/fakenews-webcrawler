@@ -7,7 +7,7 @@ class G1Spider(scrapy.Spider):
     start_urls = ["https://g1.globo.com/"]
 
     count = 0
-    max_count = 100
+    max_count = 400
 
     def parse(self, response):
         if self.count >= self.max_count:

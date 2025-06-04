@@ -6,7 +6,7 @@ class G1FatoOuFakeSpider(scrapy.Spider):
     start_urls = ["https://g1.globo.com/fato-ou-fake/"]
 
     count = 0
-    max_count = 100
+    max_count = 400
 
     def parse(self, response):
         if self.count >= self.max_count:

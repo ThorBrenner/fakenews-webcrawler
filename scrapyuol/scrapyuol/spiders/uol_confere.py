@@ -7,26 +7,22 @@ class UolConfereSpider(scrapy.Spider):
     allowed_domains = ["noticias.uol.com.br"]
     start_urls = ["https://noticias.uol.com.br/confere/"]
 
-    # Contador de notícias
     count = 0
-    max_count = 200  # Limite de notícias
+    max_count = 400  
 
     def parse(self, response):
-        # Verifica se o limite foi atingido
         if self.count >= self.max_count:
             return
 
         for manchete in response.css('.thumbnails-wrapper a'):
             link = manchete.css('::attr(href)').get()
 
-            # Incrementa o contador e verifica o limite
             if self.count < self.max_count:
                 self.count += 1
                 yield response.follow(link, self.parse_article)
             else:
-                return  # Para de coletar mais notícias se atingir o limite
+                return
 
-        # Pega a próxima página via AJAX se o limite não foi atingido
         next_page = response.css('button.ver-mais::attr(data-request)').get()
         if next_page is not None and self.count < self.max_count:
             next_data = json.loads(next_page)
@@ -47,21 +43,18 @@ class UolConfereSpider(scrapy.Spider):
         yield dados
 
     def parse_ajax(self, response):
-        # Verifica se o limite foi atingido
         if self.count >= self.max_count:
             return
 
         for manchete in response.css('.thumbnails-wrapper a'):
             link = manchete.css('::attr(href)').get()
 
-            # Incrementa o contador e verifica o limite
             if self.count < self.max_count:
                 self.count += 1
                 yield response.follow(link, self.parse_article)
             else:
-                return  # Para de coletar mais notícias se atingir o limite
+                return
 
-        # Pega a próxima página via AJAX se o limite não foi atingido
         next_page = response.css('button.ver-mais::attr(data-request)').get()
         if next_page is not None and self.count < self.max_count:
             next_data = json.loads(next_page)

@@ -7,7 +7,7 @@ class BoatosSpider(scrapy.Spider):
     start_urls = ["https://www.boatos.org/"]
 
     count = 0
-    max_count = 100
+    max_count = 400
 
     def parse(self, response):
         if self.count >= self.max_count:
@@ -21,7 +21,7 @@ class BoatosSpider(scrapy.Spider):
 
             yield response.follow(link, self.parse_article)
 
-        next_page = "https://www.boatos.org/?paged=" + str(self.count)
+        next_page = response.css('.page-numbers a::attr(href)').getall()[-1]
         if next_page is not None:
             yield response.follow(next_page, self.parse)
 
