@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16
+    container_name: factcheck_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-factcheck}
+      POSTGRES_USER: ${POSTGRES_USER:-factcheck}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-factcheck}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-factcheck} -d ${POSTGRES_DB:-factcheck}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  crawler:
+    build: .
+    container_name: factcheck_crawler
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-factcheck}
+      POSTGRES_USER: ${POSTGRES_USER:-factcheck}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-factcheck}
+      # Horário da coleta diária (HH:MM, horário do container/UTC por padrão).
+      CRAWL_TIME: ${CRAWL_TIME:-03:00}
+      # Roda uma coleta imediatamente ao subir (útil para testar).
+      RUN_ON_START: ${RUN_ON_START:-true}
+      # Limite opcional de itens por spider (vazio = sem limite / coleta completa).
+      CLOSESPIDER_ITEMCOUNT: ${CLOSESPIDER_ITEMCOUNT:-}
+
+volumes:
+  pgdata:

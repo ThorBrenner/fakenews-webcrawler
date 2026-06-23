@@ -1,0 +1,73 @@
+import json
+import re
+
+import scrapy
+
+from factcheck.items import NewsItem
+
+
+class UolConfereSpider(scrapy.Spider):
+    name = "uol_confere"
+    allowed_domains = ["noticias.uol.com.br"]
+    start_urls = ["https://noticias.uol.com.br/confere/"]
+
+    count = 0
+    max_count = 400
+
+    def parse(self, response):
+        if self.count >= self.max_count:
+            return
+
+        for manchete in response.css('.thumbnails-wrapper a'):
+            link = manchete.css('::attr(href)').get()
+
+            if self.count < self.max_count:
+                self.count += 1
+                yield response.follow(link, self.parse_article)
+            else:
+                return
+
+        next_page = response.css('button.ver-mais::attr(data-request)').get()
+        if next_page is not None and self.count < self.max_count:
+            next_data = json.loads(next_page)
+            next_url = self.get_next_url(next_data)
+
+            if next_url:
+                yield scrapy.Request(url=next_url, callback=self.parse_ajax)
+
+    def parse_article(self, response):
+        yield NewsItem(
+            link=response.url,
+            title=response.css('.title-content h1::text').get(),
+            author=response.css('.solar-author-name::text').get(),
+            data=response.css('.solar-author-date div time::text').get(),
+            text=re.sub(r'<.*?>', '', ' '.join(response.css('.jupiter-paragraph-fragment strong,p::text').getall())),
+        )
+
+    def parse_ajax(self, response):
+        if self.count >= self.max_count:
+            return
+
+        for manchete in response.css('.thumbnails-wrapper a'):
+            link = manchete.css('::attr(href)').get()
+
+            if self.count < self.max_count:
+                self.count += 1
+                yield response.follow(link, self.parse_article)
+            else:
+                return
+
+        next_page = response.css('button.ver-mais::attr(data-request)').get()
+        if next_page is not None and self.count < self.max_count:
+            next_data = json.loads(next_page)
+            next_url = self.get_next_url(next_data)
+
+            if next_url:
+                yield scrapy.Request(url=next_url, callback=self.parse_ajax)
+
+    def get_next_url(self, next_data):
+        next_params = next_data.get('busca', {}).get('params', {})
+        next_token = next_params.get('next')
+        if next_token:
+            return f"https://noticias.uol.com.br/confere/?next={next_token}"
+        return None
